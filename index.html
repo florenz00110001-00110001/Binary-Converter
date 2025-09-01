@@ -3,38 +3,130 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Letter to ASCII Binary Translator</title>
-
-<!-- PWA manifest embedded via data URL -->
-<link rel="manifest" href='data:application/manifest+json,{
-  "name":"Letter to ASCII Binary Translator",
-  "short_name":"AsciiBinary",
-  "start_url":".",
-  "display":"standalone",
-  "background_color":"#ffffff",
-  "theme_color":"#4CAF50",
-  "icons":[{"src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWNPIAAA...","sizes":"192x192","type":"image/png"}]
-}'>
-
-<meta name="theme-color" content="#4CAF50">
-
+<title>Binary ↔ Tap-Code Letters Translator</title>
 <style>
-body { font-family: sans-serif; padding: 15px; background: #f0f0f0; }
-h2 { color: #4CAF50; }
-textarea { width: 100%; height: 200px; font-family: monospace; font-size: 16px; margin-top: 10px; }
-button { font-size: 16px; padding: 10px 20px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; }
+body { font-family: sans-serif; padding: 15px; background: #f0f0f0; color: #000; transition: background 0.5s, color 0.5s; }
+h2, h3 { color: #4CAF50; }
+textarea { width: 100%; height: 150px; font-family: monospace; font-size: 16px; margin-top: 10px; }
+button { font-size: 16px; padding: 10px 20px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; margin-right: 10px; transition: background 0.3s; }
 button:hover { background: #45a049; cursor: pointer; }
-#result { font-weight: bold; font-size: 18px; margin-top: 10px; display: block; word-break: break-all; }
+#decodeResult, #encodeResult { font-weight: bold; font-size: 18px; margin-top: 10px; display: block; word-wrap: break-word; }
+.notice { margin-top: 10px; font-size: 14px; color: #555; }
+.grid-container { display: grid; grid-template-columns: repeat(5, 40px); grid-gap: 5px; margin-top: 10px; }
+.grid-container div { text-align: center; font-weight: bold; padding: 5px; background: #ddd; border-radius: 3px; }
+.dark-mode { background: #121212; color: #e0e0e0; }
+.dark-mode button { background: #388E3C; }
+.dark-mode button:hover { background: #2E7D32; }
+.dark-mode .grid-container div { background: #333; color: #fff; }
 </style>
 </head>
 <body>
-<h2>Letter to ASCII Binary Translator</h2>
-<textarea id="consoleInput" placeholder="Type letters here..."></textarea>
-<button onclick="encodeToBinary()">Encode</button>
-<p>Result: <span id="result"></span></p>
+<h2>Binary ↔ Tap-Code Letters Translator</h2>
+<p class="notice">This website is made for a more creative and mathematical way of exchanging languages. This is just for fun!<br>
+Please replace "K" with "C" in letters because ASCII 5-tap code mixes C and K!</p>
+
+<button onclick="toggleDarkMode()">Toggle Dark Mode 🌙</button>
+
+<h3>Decode (ASCII-binary → Letters)</h3>
+<textarea id="decodeInput" placeholder="Place the ASCII-binary tap-code numbers here"></textarea><br>
+<button onclick="decodeTapBinary()">Decode</button>
+<button onclick="copyResult('decodeResult')">Copy Result</button>
+<p>Result: <span id="decodeResult"></span></p>
+
+<h3>Encode (Letters → ASCII-binary)</h3>
+<textarea id="encodeInput" placeholder="Place letters here. Please don't put K."></textarea><br>
+<button onclick="encodeTapBinary()">Encode</button>
+<button onclick="copyResult('encodeResult')">Copy Result</button>
+<p>Result: <span id="encodeResult"></span></p>
+
+<h3>ASCII 5×5 Tap-Code Grid</h3>
+<p>Row × Column mapping (1–5):</p>
+<div class="grid-container" id="tapGridDisplay"></div>
 
 <script>
-function encodeToBinary() {
+const tapGrid = [
+    ['A','B','C','D','E'],
+    ['F','G','H','I','J'],
+    ['L','M','N','O','P'],
+    ['Q','R','S','T','U'],
+    ['V','W','X','Y','Z']
+];
+
+// Fill grid display
+const gridDiv = document.getElementById("tapGridDisplay");
+for(let r=0;r<5;r++){
+    for(let c=0;c<5;c++){
+        let cell = document.createElement("div");
+        cell.textContent = tapGrid[r][c] + ` (${r+1},${c+1})`;
+        gridDiv.appendChild(cell);
+    }
+}
+
+function decodeTapBinary() {
+    let input = document.getElementById("decodeInput").value.trim();
+    let binaries = input.split(/\s+/);
+    let numbers = "";
+    binaries.forEach(bin => {
+        if (/^[01]{8}$/.test(bin)) {
+            numbers += String.fromCharCode(parseInt(bin, 2));
+        }
+    });
+
+    let letters = "";
+    for (let i = 0; i < numbers.length - 1; i += 2) {
+        let row = parseInt(numbers[i]);
+        let col = parseInt(numbers[i+1]);
+        if(row >=1 && row <=5 && col >=1 && col <=5) {
+            letters += tapGrid[row-1][col-1];
+        } else {
+            letters += "?";
+        }
+    }
+
+    document.getElementById("decodeResult").textContent = letters;
+}
+
+function encodeTapBinary() {
+    let input = document.getElementById("encodeInput").value.toUpperCase().replace(/[^A-Z]/g,'');
+    let numbers = "";
+
+    for (let ch of input) {
+        for (let r=0; r<5; r++) {
+            for (let c=0; c<5; c++) {
+                if(tapGrid[r][c] === ch) {
+                    numbers += (r+1).toString() + (c+1).toString();
+                }
+            }
+        }
+    }
+
+    // Convert numbers to ASCII-binary
+    let binary = "";
+    for(let digit of numbers) {
+        let bin = digit.charCodeAt(0).toString(2).padStart(8,'0');
+        binary += bin + " ";
+    }
+
+    document.getElementById("encodeResult").textContent = binary.trim();
+}
+
+function copyResult(resultId) {
+    let text = document.getElementById(resultId).textContent;
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert("Result copied!");
+}
+
+function toggleDarkMode(){
+    document.body.classList.toggle("dark-mode");
+}
+</script>
+</body>
+</html>function encodeToBinary() {
     let input = document.getElementById("consoleInput").value;
     let result = "";
     for (let i = 0; i < input.length; i++) {
